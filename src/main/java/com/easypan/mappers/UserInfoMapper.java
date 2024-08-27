@@ -53,4 +53,9 @@ public interface UserInfoMapper<T,P> extends BaseMapper<T,P> {
 	 * 根据NickName获取对象
 	 */
 	T selectByNickName(@Param("nickName") String nickName);
+
+	/**
+	 * 更新用户使用空间
+	 */
+	Integer updateUserSpace(@Param("userId") String userId, @Param("useSpace") Long useSpace, @Param("totalSpace") Long totalSpace);
 }

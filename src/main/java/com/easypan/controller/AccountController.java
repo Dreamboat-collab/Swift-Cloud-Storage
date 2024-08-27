@@ -76,7 +76,7 @@ public class AccountController extends ABaseController{
 
 	//发送邮箱验证码（尚未校验）   checkcode:用户输入的验证码   type:0:注册 1:找回密码
 	@RequestMapping("/sendEmailCode")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
 	public ResponseVO sendEmailCode(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max = 150) String email, String checkCode, Integer type){
 		//发送邮箱验证码之前，需要先验证用户在前端输入的图形验证码是否正确
 		try{
@@ -94,7 +94,7 @@ public class AccountController extends ABaseController{
 
 	//注册(参数：emailCode是邮箱验证码)
 	@RequestMapping("/register")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
 	public ResponseVO register(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max = 150) String email, @VerifyParam(required = true) String nickName, @VerifyParam(required = true,regex = VerifyRegexEnum.PASSWORD,max = 18) String password, @VerifyParam(required = true) String checkCode, @VerifyParam(required = true) String emailCode){
 		try{
 			if(!checkCode.equalsIgnoreCase((String) session.getAttribute(Constants.CHECK_CODE_KEY))){
@@ -110,7 +110,7 @@ public class AccountController extends ABaseController{
 
 	//登录
 	@RequestMapping("/login")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkLogin = false,checkParams = true)
 	public ResponseVO login(HttpSession session, @VerifyParam(required = true) String email, @VerifyParam(required = true) String password, @VerifyParam(required = true) String checkCode){
 		try{
 			if(!checkCode.equalsIgnoreCase((String) session.getAttribute(Constants.CHECK_CODE_KEY))){
@@ -127,7 +127,7 @@ public class AccountController extends ABaseController{
 
 	//找回密码
 	@RequestMapping("/resetPwd")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
 	public ResponseVO resetPwd(HttpSession session, @VerifyParam(required = true) String email, @VerifyParam(required = true) String password, @VerifyParam(required = true) String checkCode, @VerifyParam(required = true) String emailCode){
 		try{
 			//验证图形验证码
@@ -145,7 +145,7 @@ public class AccountController extends ABaseController{
 
 	//获取用户头像
 	@RequestMapping("/getAvatar/{userId}")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
 	public void getAvatar(HttpServletResponse response, HttpSession session, @VerifyParam(required = true) @PathVariable("userId") String userId) throws IOException {
 		//头像所在的文件夹
 		String avatarFolderName = Constants.FILE_FOLDER_FILE+Constants.FILE_FOLDER_AVATAR_NAME;
@@ -188,7 +188,7 @@ public class AccountController extends ABaseController{
 
 	//获取用户信息
 	@RequestMapping("/getUserInfo")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor
 	public ResponseVO getUserInfo(HttpSession session){
 		//ABaseController中过去用户信息的方法
 		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
@@ -196,8 +196,8 @@ public class AccountController extends ABaseController{
 	}
 
 	//获取用户使用空间的信息
-	@RequestMapping("/getUserSpace")
-	@GlobalInterceptor(checkParams = true)
+	@RequestMapping("/getUseSpace")
+	@GlobalInterceptor
 	public ResponseVO getUserSpace(HttpSession session){
 		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
 		UserSpaceDto spaceDto = redisComponent.getUserSpaceUse(sessionWebUserDto.getUserId());
@@ -206,13 +206,12 @@ public class AccountController extends ABaseController{
 
 	//退出登录
 	@RequestMapping("/logout")
-	@GlobalInterceptor(checkParams = true)
 	public ResponseVO logout(HttpSession session){
 		session.invalidate();
 		return getSuccessResponseVO(null);
 	}
 
-	//上传头像
+	//更新头像
 	@RequestMapping("/updateUserAvatar")
 	@GlobalInterceptor
 	public ResponseVO updateUserAvatar(HttpSession session, MultipartFile avatar) {

@@ -570,6 +570,27 @@
 		where email=#{email}
 	</update>
 
+	<!-- 更新用户空间-->
+    <update id="updateUserSpace">
+		update user_info
+		<set>
+			<if test="useSpace!=null" >
+				use_space = use_space+#{useSpace},
+			</if>
+			<if test="totalSpace!=null" >
+				total_space = total_space+#{totalSpace},
+			</if>
+		</set>
+		where user_id = #{userId}
+		<if test="useSpace!=null" >
+			<!-- <![CDATA[ ]]>是一个标记，用于定义字符数据。字符数据中的内容将被解析器视为纯文本，而不是XML标记-->
+			<![CDATA[ and (use_space + #{useSpace}) <= total_space ]]>
+		</if>
+		<if test="totalSpace!=null" >
+			<![CDATA[ and (use_space + #{useSpace}) <= total_space ]]>
+		</if>
+	</update>
+
     <!-- 根据NickName删除-->
 	<delete id="deleteByNickName">
 		delete

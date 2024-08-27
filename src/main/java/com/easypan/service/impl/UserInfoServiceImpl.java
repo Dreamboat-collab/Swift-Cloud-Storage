@@ -13,7 +13,10 @@ import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.entity.dto.SysSettingsDto;
 import com.easypan.entity.dto.UserSpaceDto;
 import com.easypan.entity.enums.UserStatusEnum;
+import com.easypan.entity.po.FileInfo;
+import com.easypan.entity.query.FileInfoQuery;
 import com.easypan.exception.BusinessException;
+import com.easypan.mappers.FileInfoMapper;
 import com.easypan.service.EmailCodeService;
 import org.apache.catalina.User;
 import org.apache.commons.lang3.ArrayUtils;
@@ -31,6 +34,7 @@ import com.easypan.utils.StringTools;
 import org.springframework.transaction.annotation.Transactional;
 
 
+
 /**
  *  业务接口实现
  */
@@ -39,6 +43,9 @@ public class UserInfoServiceImpl implements UserInfoService {
 
 	@Resource
 	private UserInfoMapper<UserInfo, UserInfoQuery> userInfoMapper;
+
+	@Resource
+	private FileInfoMapper<FileInfo, FileInfoQuery> fileInfoMapper;
 
 	@Resource
 	private EmailCodeService emailCodeService;
@@ -213,11 +220,12 @@ public class UserInfoServiceImpl implements UserInfoService {
 
 		//用户空间
 		UserSpaceDto userSpaceDto = new UserSpaceDto();
-//		userSpaceDto.setUseSpace(userInfo.getUseSpace());
+		Long useSpace = fileInfoMapper.selectUseSpace(userInfo.getUserId());
+		userSpaceDto.setUseSpace(useSpace);
 		userSpaceDto.setTotalSpace(userInfo.getTotalSpace());
 		//将用户内存使用情况存入redis
 		redisComponent.saveUserSpaceUse(userInfo.getUserId(),userSpaceDto);
-		return null;
+		return sessionWebUserDto;
 	}
 
 	/**

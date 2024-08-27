@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.servlet.MultipartConfigElement;
 
-@EnableAsync
+@EnableAsync //启用Spring的异步方法执行功能。
 @SpringBootApplication(scanBasePackages = {"com.easypan"})
 @MapperScan(basePackages = {"com.easypan.mappers"})  //Mapper所在的地址
-@EnableTransactionManagement
-@EnableScheduling
+@EnableTransactionManagement //启用Spring的声明式事务管理功能。
+@EnableScheduling //启用Spring的任务调度功能。
 public class EasypanApplication {
     public static void main(String[] args) {
         SpringApplication.run(EasypanApplication.class, args);

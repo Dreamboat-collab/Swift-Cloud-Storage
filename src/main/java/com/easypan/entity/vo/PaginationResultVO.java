@@ -2,12 +2,12 @@ package com.easypan.entity.vo;
 import java.util.ArrayList;
 import java.util.List;
 
-
+//分页的查询结果
 public class PaginationResultVO<T> {
-	private Integer totalCount;
-	private Integer pageSize;
-	private Integer pageNo;
-	private Integer pageTotal;
+	private Integer totalCount; // 总记录数
+	private Integer pageSize; //每页记录数
+	private Integer pageNo; //当前页码
+	private Integer pageTotal; //总页数
 	private List<T> list = new ArrayList<T>();
 
 	public PaginationResultVO(Integer totalCount, Integer pageSize, Integer pageNo, List<T> list) {
