@@ -76,4 +76,14 @@ public interface FileInfoService {
 	 * 上传文件，返回上传后的文件信息给前端:UploadResultDto包含fileid和status信息
 	 */
 	UploadResultDto uploadFile(SessionWebUserDto webUserDto, String fileId, MultipartFile file, String fileName, String filePid, String fileMd5, Integer chunkIndex, Integer chunks);
+
+	/**
+	 * 创建目录(需要userId结合fileId才能定位到一个文件)
+	 */
+	FileInfo newFolder(String filePid, String userId, String folderName);
+
+	/**
+	 * 重命名
+	 */
+	FileInfo rename(String fileId, String userId, String fileName);
 }

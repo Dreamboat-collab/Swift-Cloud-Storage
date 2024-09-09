@@ -117,6 +117,7 @@ public class AccountController extends ABaseController{
 				throw new BusinessException("图片验证码不正确");
 			}
 			SessionWebUserDto sessionWebUserDto = userInfoService.login(email,password);
+			//将用户信息存储到session中
 			session.setAttribute(Constants.SESSION_KEY,sessionWebUserDto);
 			return getSuccessResponseVO(sessionWebUserDto);
 		}

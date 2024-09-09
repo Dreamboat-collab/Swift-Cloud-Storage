@@ -13,11 +13,13 @@ import com.easypan.entity.vo.FileInfoVO;
 import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.vo.ResponseVO;
 import com.easypan.service.FileInfoService;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import com.easypan.annotation.GlobalInterceptor;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,7 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @RestController("fileInfoController")
 @RequestMapping("/file")
-public class FileInfoController extends ABaseController{
+public class FileInfoController extends CommonFileController{
 
 	@Resource
 	private FileInfoService fileInfoService;
@@ -71,4 +73,38 @@ public class FileInfoController extends ABaseController{
 		UploadResultDto resultDto = fileInfoService.uploadFile(webUserDto, fileId, file, fileName, filePid, fileMd5, chunkIndex, chunks);
 		return getSuccessResponseVO(resultDto);
 	}
+
+	//获取图片的缩略图
+	@RequestMapping("/getImage/{imageFolder}/{imageName}")
+	@GlobalInterceptor(checkParams = true)
+	public void getImage(HttpServletResponse response, @PathVariable("imageFolder") String imageFolder, @PathVariable("imageName") String imageName) {
+		super.getImage(response, imageFolder, imageName);
+	}
+
+	//创建新的文件目录(为什么需要filePid：因为用户可能创建多级目录，需要知道目录的父目录已得知其层级)
+	@RequestMapping("/newFoloder")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO newFolder(HttpSession session, @VerifyParam(required = true) String filePid, @VerifyParam(required = true) String fileName) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		FileInfo fileInfo = fileInfoService.newFolder(filePid, sessionWebUserDto.getUserId(), fileName);
+		return getSuccessResponseVO(fileInfo);
+	}
+
+	//获取当前目录下的内容（用户点入文件夹后需要显示该文件夹下的内容） 参数path：文件ID
+	@RequestMapping("/getFolderInfo")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO getFolderInfo(HttpSession session, @VerifyParam(required = true) String path) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		return super.getFolderInfo(path, sessionWebUserDto.getUserId()); //后续很多功能都需要用到getFolderInfo，因此直接写在父类中
+	}
+
+	//文件重命名
+	@RequestMapping("/rename")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO rename(HttpSession session, @VerifyParam(required = true) String fileId, @VerifyParam(required = true) String fileName) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		FileInfo fileInfo = fileInfoService.rename(fileId, sessionWebUserDto.getUserId(), fileName);
+		return getSuccessResponseVO(fileInfo);
+	}
+
 }

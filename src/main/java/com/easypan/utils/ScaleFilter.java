@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 public class ScaleFilter {
     private static final Logger logger = LoggerFactory.getLogger(ScaleFilter.class);
 
-
+    //参数：分片合并后的文件的路径，缩略图的长宽，压缩后图片的输出的路径，是否删除源文件
     public static Boolean createThumbnailWidthFFmpeg(File file, int thumbnailWidth, File targetFile, Boolean delSource) {
         try {
             BufferedImage src = ImageIO.read(file);
@@ -40,6 +40,7 @@ public class ScaleFilter {
         }
     }
 
+    //视频生成缩略图
     public static void createCover4Video(File sourceFile, Integer width, File targetFile) {
         try {
             String cmd = "ffmpeg -i %s -y -vframes 1 -vf scale=%d:%d/a %s";

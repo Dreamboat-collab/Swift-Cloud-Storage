@@ -288,7 +288,7 @@ public class FileInfoServiceImpl implements FileInfoService {
 				@Override
 				public void afterCommit() {
 					//执行转码操作
-					fileInfoService.transferFile(webUserDto.getUserId(), webUserDto);
+					fileInfoService.transferFile(fileInfo.getFileId(), webUserDto);
 				}
 			});
 
@@ -345,6 +345,7 @@ public class FileInfoServiceImpl implements FileInfoService {
 		redisComponent.saveUserSpaceUse(webUserDto.getUserId(), userSpaceDto);
 	}
 
+	//合并分片文件。
 	@Async //异步方法执行的注解.调用这个方法时，Spring 会在一个单独的线程中运行它，而不是在调用者线程中直接执行.使用 @Async 可以将这些耗时的操作放到另一个线程中执行，主线程可以立即返回并处理其他任务，从而提高应用的响应速度。
 	public void transferFile(String fileId, SessionWebUserDto webUserDto) {
 		Boolean transferSuccess = true;
@@ -361,13 +362,16 @@ public class FileInfoServiceImpl implements FileInfoService {
 			String tempFolderName = appConfig.getProjectFolder() + Constants.FILE_FOLDER_TEMP;
 			String currentUserFolderName = webUserDto.getUserId()+fileId;
 			File fileFolder = new File(tempFolderName + currentUserFolderName);
-
+			if(!fileFolder.exists()){
+				fileFolder.mkdirs();
+			}
+			//文件后缀
 			String fileSuffix = StringTools.getFileSuffix(fileInfo.getFileName());
 			String month = DateUtil.format(fileInfo.getCreateTime(),DateTimePatternEnum.YYYYMM.getPattern());
 
-			//目标目录（将temp目录中的分片转到新的目标目录中）
+			//目标目录（目标是将temp目录中的分片转到新的目标目录中）
 			String targetFolderName = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE;  //project/file
-			File targetFolder = new File(targetFolderName + "/" + month); //project/file/202408
+			File targetFolder = new File(targetFolderName + "/" + month); //project/file/202409
 			if(!targetFolder.exists()){
 				targetFolder.mkdirs();
 			}
@@ -376,7 +380,7 @@ public class FileInfoServiceImpl implements FileInfoService {
 			String realFileName = currentUserFolderName+fileSuffix;
 			targetFilePath = targetFolder.getPath()+"/"+realFileName;
 
-			//合并文件(合并成功后删除掉temp下的分片内容)
+			//合并文件(合并成功后删除掉temp下的分片内容)   参数：临时文件目录、要写入的目标文件路径、文件名，是否删除temp中源文件
 			union(fileFolder.getPath(),targetFilePath,fileInfo.getFileName(),true);
 
 			//视频文件切割
@@ -388,8 +392,14 @@ public class FileInfoServiceImpl implements FileInfoService {
 				String coverPath = targetFolderName+"/"+cover;
 				//第一个参数是视频文件的路径，第二个参数是视频文件的长宽，第三个是视频缩略图的路径
 				ScaleFilter.createCover4Video(new File(targetFilePath), Constants.LENGTH_150, new File(coverPath));
-			}else if(FileTypeEnums.MUSIC==fileTypeEnum){
-
+			}else if(FileTypeEnums.IMAGE==fileTypeEnum){
+				//图片生成缩略图
+				cover = month + "/" + realFileName.replace(".","_."); //缩略图的路径，将原图中的图片名末尾添加一个“_”符号以作区分
+				String coverPath = targetFolderName+"/"+cover;
+				Boolean created = ScaleFilter.createThumbnailWidthFFmpeg(new File(targetFilePath),Constants.LENGTH_150,new File(coverPath),false); //缩略图长宽为50
+				if(!created){
+					FileUtils.copyFile(new File(targetFilePath), new File(coverPath));//可能存在文件图片过小的问题导致缩略图生成失败，因此直接将原图拷贝一份作为缩略图
+				}
 			}
 		}catch (Exception e){
 			logger.error("文件转码失败，文件ID:{},userId:{}",fileId,webUserDto.getUserId());
@@ -477,5 +487,77 @@ public class FileInfoServiceImpl implements FileInfoService {
 		ProcessUtils.executeCommand(cmd, false);
 		//删除index.ts
 		new File(tsPath).delete();
+	}
+
+	//创建新的目录
+	@Override
+	public FileInfo newFolder(String filePid, String userId, String folderName) {
+		checkFileName(filePid,userId,folderName,FileFolderTypeEnums.FILE.getType());
+		FileInfo fileInfo = new FileInfo();
+		Date curDate = new Date();
+		fileInfo.setFileId(StringTools.getRandomString(Constants.LENGTH_10));
+		fileInfo.setFilePid(filePid);
+		fileInfo.setUserId(userId);
+		fileInfo.setFileName(folderName);
+		fileInfo.setFolderType(FileFolderTypeEnums.FOLDER.getType());
+		fileInfo.setCreateTime(curDate);
+		fileInfo.setLastUpdateTime(curDate);
+		fileInfo.setStatus(FileStatusEnums.USING.getStatus());
+		fileInfo.setDelFlag(FileDelFlagEnums.USING.getFlag());
+		fileInfoMapper.insert(fileInfo);
+		return fileInfo;
+	}
+
+    //检查是否同级目录下存在命名重复(参数中folderType表示是目录还是文件类型)
+	private void checkFileName(String filePid, String userId, String fileName, Integer folderType) {
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setFolderType(folderType);
+		fileInfoQuery.setFileName(fileName);
+		fileInfoQuery.setFilePid(filePid);
+		fileInfoQuery.setUserId(userId);
+		fileInfoQuery.setDelFlag(FileDelFlagEnums.USING.getFlag());
+		Integer count = this.fileInfoMapper.selectCount(fileInfoQuery);
+		if (count > 0) {
+			throw new BusinessException("此目录下已存在同名文件，请修改名称");
+		}
+	}
+
+	//文件重命名
+	@Transactional(rollbackFor = Exception.class) //数据库查询到出现同名文件，需要回滚之前的update操作
+	@Override
+	public FileInfo rename(String fileId, String userId, String fileName) {
+		//判断文件是否存在
+		FileInfo fileInfo = fileInfoMapper.selectByFileIdAndUserId(fileId, userId);
+		if(null == fileInfo){
+			throw new BusinessException("文件命名重复");
+		}
+
+		String filePid = fileInfo.getFilePid();
+		//判断名称在同级目录下是否存在重复
+		checkFileName(filePid,userId,fileName,fileInfo.getFolderType());
+		//获取文件后缀，因为前端传来的文件名是不带后缀的，因此需要将后缀补充上
+		if(FileFolderTypeEnums.FILE.getType().equals(fileInfo.getFolderType())){
+			fileName = fileName + StringTools.getFileSuffix(fileInfo.getFileName());
+		}
+
+		//更新数据库对应的文件名、修改时间
+		Date curDate = new Date();
+		FileInfo fileInfo1 = new FileInfo();
+		fileInfo1.setLastUpdateTime(curDate);
+		fileInfo1.setFileName(fileName);
+		fileInfoMapper.updateByFileIdAndUserId(fileInfo1,fileId,userId);
+
+		//插入数据后查询数据库是否出现文件重名问题
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setFilePid(filePid);
+		fileInfoQuery.setFileName(fileName);
+		fileInfoQuery.setUserId(userId);
+		Integer count = fileInfoMapper.selectCount(fileInfoQuery);
+		if(count > 0){
+			throw new BusinessException("出现文件重名错误");
+		}
+		fileInfo.setFileName(fileName);
+		fileInfo.setLastUpdateTime(curDate);
+		return fileInfo;
 	}
 }

@@ -37,6 +37,7 @@ public class RedisUtils<V> {
         }
     }
 
+    //opsForValue() 方法返回的是一个 ValueOperations 接口，它专门用于对 Redis 中的字符串类型（即 value）进行操作。使用 opsForValue() 可以执行类似于设置（set）、获取（get）
     public V get(String key) {
         return key == null ? null : redisTemplate.opsForValue().get(key);
     }
