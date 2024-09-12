@@ -7,12 +7,16 @@ import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.entity.dto.UploadResultDto;
 import com.easypan.entity.enums.FileCategoryEnums;
 import com.easypan.entity.enums.FileDelFlagEnums;
+import com.easypan.entity.enums.FileFolderTypeEnums;
 import com.easypan.entity.query.FileInfoQuery;
 import com.easypan.entity.po.FileInfo;
 import com.easypan.entity.vo.FileInfoVO;
 import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.vo.ResponseVO;
+import com.easypan.mappers.FileInfoMapper;
 import com.easypan.service.FileInfoService;
+import com.easypan.utils.StringTools;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,6 +37,7 @@ public class FileInfoController extends CommonFileController{
 
 	@Resource
 	private FileInfoService fileInfoService;
+
 	/**
 	 * 根据条件分页查询，返回分页查询结果的实体对象，即文件列表
 	 */
@@ -107,4 +112,31 @@ public class FileInfoController extends CommonFileController{
 		return getSuccessResponseVO(fileInfo);
 	}
 
+
+	//用户移动文件时，点开某文件夹，会显示文件夹中的内容进行预览；第二个参数用于对当前文件/文件夹进行过滤，因为是移动操作，不能从本文件移动到本文件
+	@RequestMapping("loadAllFolder")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO loadAllFolder(HttpSession session, @VerifyParam(required = true) String filePid, String currentFileIds) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setFilePid(filePid);
+		fileInfoQuery.setUserId(sessionWebUserDto.getUserId());
+		fileInfoQuery.setFolderType(FileFolderTypeEnums.FOLDER.getType());  //移动文件是移动到文件夹中，因此查询返回的类型应该是文件夹类型
+		if(!StringTools.isEmpty(currentFileIds)){
+			fileInfoQuery.setExcludeFileIdArray(currentFileIds.split(","));
+		}
+		fileInfoQuery.setDelFlag(FileDelFlagEnums.USING.getFlag());
+		fileInfoQuery.setOrderBy("create_time desc");
+		List<FileInfo> list = fileInfoService.findListByParam(fileInfoQuery);
+		return getSuccessResponseVO(list);
+	}
+
+	//移动文件;  第一个参数是多个fileId组成的String，第二个是要移动到的文件夹id
+	@RequestMapping("/changeFileFolder")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO changeFileFolder(HttpSession session, @VerifyParam(required = true) String fileIds, @VerifyParam String filePid) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		fileInfoService.changeFileFolder(fileIds, filePid, sessionWebUserDto.getUserId());
+		return getSuccessResponseVO(null);
+	}
 }

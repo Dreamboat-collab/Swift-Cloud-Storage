@@ -3,10 +3,9 @@ package com.easypan.service.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Date;
-import java.util.List;
-import java.util.Random;
-import java.util.RandomAccess;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.annotation.Resource;
 
@@ -559,5 +558,48 @@ public class FileInfoServiceImpl implements FileInfoService {
 		fileInfo.setFileName(fileName);
 		fileInfo.setLastUpdateTime(curDate);
 		return fileInfo;
+	}
+
+	@Override
+	public void changeFileFolder(String fileIds, String filePid, String userId) {
+		if(fileIds.equals(filePid)){
+			throw new BusinessException(ResponseCodeEnum.CODE_600);  //要移动的内容和将要移动到的地方重合了
+		}
+		//非根目录
+		if(!Constants.ZERO_STR.equals(filePid)){
+			FileInfo fileInfo = fileInfoService.getFileInfoByFileIdAndUserId(filePid,userId);
+			if(null == fileInfo || !FileDelFlagEnums.USING.getFlag().equals(fileInfo.getDelFlag())){
+				throw new BusinessException(ResponseCodeEnum.CODE_600); //目标移动目录不存在或者已经被删除
+			}
+		}
+
+		//目标移动目录中是否存在和被移动文件同名的文件
+		String[] fileIdArray = fileIds.split(",");
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setFilePid(filePid);
+		fileInfoQuery.setUserId(userId);
+		List<FileInfo> dbFileList = fileInfoMapper.selectList(fileInfoQuery); //找到的目标移动目录下的文件集合
+		//FileInfo文件名作为键，FileInfo作为值；当出现两个同名的FileInfo，保留后出现的FileInfo对象
+		Map<String, FileInfo> dbFileNameMap = dbFileList.stream().collect(Collectors.toMap(FileInfo::getFileName, Function.identity(), (file1, file2) -> file2));
+
+		//查询选中的文件
+		fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setFileIdArray(fileIdArray);
+		fileInfoQuery.setUserId(userId);
+		List<FileInfo> selectFileList  = fileInfoService.findListByParam(fileInfoQuery);
+
+		//将所选文件重命名
+		for(FileInfo item : selectFileList){
+			FileInfo rootFileInfo = dbFileNameMap.get(item.getFileId());
+			//文件名已存在,重命名目标目录下的文件名
+			FileInfo updateInfo = new FileInfo();
+			if(null != rootFileInfo){
+				String fileName = StringTools.rename(item.getFileName());
+				updateInfo.setFileName(fileName);
+			}
+			updateInfo.setFilePid(item.getFilePid());
+			fileInfoMapper.updateByFileIdAndUserId(updateInfo,item.getUserId(),userId);  //如果没有重名，只需要修改被移动文件的pid属性
+		}
+
 	}
 }

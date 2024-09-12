@@ -86,4 +86,9 @@ public interface FileInfoService {
 	 * 重命名
 	 */
 	FileInfo rename(String fileId, String userId, String fileName);
+
+	/**
+	 * 移动文件
+	 */
+	void changeFileFolder(String fileIds, String filePid, String userId);
 }

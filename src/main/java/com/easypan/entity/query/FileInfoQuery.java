@@ -119,6 +119,9 @@ public class FileInfoQuery extends BaseParam {
 
 	private String[] fileIdArray;
 
+	//	排除的文件数组
+	private String[] excludeFileIdArray;
+
 
 	public void setFileId(String fileId){
 		this.fileId = fileId;
@@ -355,5 +358,13 @@ public class FileInfoQuery extends BaseParam {
 
     public String[] getFileIdArray() {
         return fileIdArray;
+    }
+
+    public String[] getExcludeFileIdArray() {
+        return excludeFileIdArray;
+    }
+
+    public void setExcludeFileIdArray(String[] excludeFileIdArray) {
+        this.excludeFileIdArray = excludeFileIdArray;
     }
 }
