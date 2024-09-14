@@ -1,8 +1,11 @@
 package com.easypan.mappers;
 
+import com.easypan.entity.po.FileInfo;
 import com.easypan.entity.po.UserInfo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  *  数据库操作接口
@@ -58,4 +61,6 @@ public interface UserInfoMapper<T,P> extends BaseMapper<T,P> {
 	 * 更新用户使用空间
 	 */
 	Integer updateUserSpace(@Param("userId") String userId, @Param("useSpace") Long useSpace, @Param("totalSpace") Long totalSpace);
+
+
 }

@@ -602,4 +602,53 @@ public class FileInfoServiceImpl implements FileInfoService {
 		}
 
 	}
+
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public void removeFile2RecycleBatch(String userId, String fileIds) {
+		String[] fileIdArray = fileIds.split(",");
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setFileIdArray(fileIdArray);
+		fileInfoQuery.setUserId(userId);
+		fileInfoQuery.setDelFlag(FileDelFlagEnums.USING.getFlag());
+		List<FileInfo> fileInfoList = fileInfoMapper.selectList(fileInfoQuery);
+		if(fileInfoList.isEmpty()){
+			return;
+		}
+
+		//递归删除所选内容中类型为文件夹下的内容，将他们的fileId作为filePid存储在数组
+		List<String> delFilePidList = new ArrayList<>(); //此集合中的文件夹下的内容需更新为已删除
+		for(FileInfo item : fileInfoList){
+			traverDel(delFilePidList, userId, item.getFileId(), FileDelFlagEnums.USING.getFlag());
+		}
+
+		//将需要删除的文件夹下的内容更新为已删除
+		if(!delFilePidList.isEmpty()){
+			FileInfo updateInfo = new FileInfo();
+			updateInfo.setDelFlag(FileDelFlagEnums.DEL.getFlag());
+			fileInfoMapper.updateFileDelFlagBatch(updateInfo,userId,delFilePidList,null,FileDelFlagEnums.USING.getFlag());
+		}
+		//所选内容更新为已删除（包括文件、文件夹）
+		List<String> delFileIdList = Arrays.asList(fileIdArray);
+		FileInfo fileInfo = new FileInfo();
+		fileInfo.setRecoveryTime(new Date());
+		fileInfo.setDelFlag(FileDelFlagEnums.RECYCLE.getFlag());
+		this.fileInfoMapper.updateFileDelFlagBatch(fileInfo, userId, null, delFileIdList, FileDelFlagEnums.USING.getFlag());
+	}
+	//递归删除文件夹内容，将找到的可删除的文件夹id放入delFilePidList
+	private void traverDel(List<String> delFilePidList, String userId, String fileId, Integer delFlag){
+		if(fileId==null || fileId.isEmpty()){
+			return;
+		}
+		delFilePidList.add(fileId);
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setUserId(userId);
+		fileInfoQuery.setFilePid(fileId);
+		fileInfoQuery.setDelFlag(delFlag);
+		fileInfoQuery.setFolderType(FileFolderTypeEnums.FOLDER.getType());  //只有文件夹类型才需要递归删除
+		List<FileInfo> fileInfoList = fileInfoMapper.selectList(fileInfoQuery);
+		for(FileInfo item : fileInfoList){
+			traverDel(delFilePidList,userId,item.getFileId(),delFlag);
+		}
+	}
 }

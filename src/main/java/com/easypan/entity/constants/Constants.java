@@ -7,6 +7,8 @@ public class Constants {
 
     public static final Integer LENGTH_15 = 15;
 
+    public static final Integer LENGTH_50 = 50;
+
     public static final Integer LENGTH_150 = 150;
 
     public static final String ZERO_STR = "0";
@@ -37,6 +39,8 @@ public class Constants {
 
     public static final Integer REDIS_KEY_EXPIRES_ONE_MIN = 60;
 
+    public static final Integer REDIS_KEY_EXPIRES_FIVE_MIN = REDIS_KEY_EXPIRES_ONE_MIN*5;
+
     public static final Integer REDIS_KEY_EXPIRES_DAY = REDIS_KEY_EXPIRES_ONE_MIN*60*24;
 
     public static final Integer REDIS_KEY_EXPIRES_ONE_HOUR = REDIS_KEY_EXPIRES_ONE_MIN*60;
@@ -49,6 +53,9 @@ public class Constants {
 
     //Redis中存储临时文件
     public static final String REDIS_KEY_USER_FILE_TEMP_SIZE = "easypan:user:file:temp:";
+
+    //Redis中存储下载code
+    public static final String REDIS_KEY_DOWNLOAD = "easypan:download:";
 
     public static final String TS_NAME = "index.ts";
 

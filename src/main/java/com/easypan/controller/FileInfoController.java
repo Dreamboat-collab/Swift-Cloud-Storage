@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import com.easypan.annotation.GlobalInterceptor;
@@ -137,6 +138,29 @@ public class FileInfoController extends CommonFileController{
 	public ResponseVO changeFileFolder(HttpSession session, @VerifyParam(required = true) String fileIds, @VerifyParam String filePid) {
 		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
 		fileInfoService.changeFileFolder(fileIds, filePid, sessionWebUserDto.getUserId());
+		return getSuccessResponseVO(null);
+	}
+
+	//创建下载链接；在正式下载之前，先完成身份校验，确定已经登录，生成一个有时效性的code
+	@RequestMapping("/createDownloadUrl/{fileId}")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO createDownloadUrl(HttpSession session, @VerifyParam(required = true) @PathVariable("fileId") String fileId) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		return super.createDownloadUrl(fileId,sessionWebUserDto.getUserId());
+	}
+
+	@RequestMapping("/download/{code}")
+	@GlobalInterceptor(checkParams = true, checkLogin = false)
+	public void download(HttpServletRequest request, HttpServletResponse response, @VerifyParam(required = true) @PathVariable("code") String code) throws Exception {
+		super.download(request,response,code);
+	}
+
+	//删除文件（支持批量删除）
+	@RequestMapping("/delFile")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO delFile(HttpSession session, @VerifyParam(required = true) String fileIds) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		fileInfoService.removeFile2RecycleBatch(sessionWebUserDto.getUserId(),fileIds);
 		return getSuccessResponseVO(null);
 	}
 }

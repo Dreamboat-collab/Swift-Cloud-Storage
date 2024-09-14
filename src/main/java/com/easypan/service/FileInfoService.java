@@ -91,4 +91,9 @@ public interface FileInfoService {
 	 * 移动文件
 	 */
 	void changeFileFolder(String fileIds, String filePid, String userId);
+
+	/**
+	 * 删除文件
+	 */
+	void removeFile2RecycleBatch(String userId, String fileIds);
 }

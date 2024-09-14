@@ -1,6 +1,7 @@
 package com.easypan.component;
 
 import com.easypan.entity.constants.Constants;
+import com.easypan.entity.dto.DownloadFileDto;
 import com.easypan.entity.dto.SysSettingsDto;
 import com.easypan.entity.dto.UserSpaceDto;
 import com.easypan.entity.po.FileInfo;
@@ -72,5 +73,15 @@ public class RedisComponent {
         }
 
         return 0L;
+    }
+
+    //保存下载文件code
+    public void saveDownloadCode(String code, DownloadFileDto downloadFileDto){
+        redisUtils.setex(Constants.REDIS_KEY_DOWNLOAD+code,downloadFileDto,Constants.REDIS_KEY_EXPIRES_FIVE_MIN); //过期时间为5min
+    }
+
+    //通过下载文件code获取文件
+    public DownloadFileDto getDownloadCode(String code){
+        return (DownloadFileDto) redisUtils.get(Constants.REDIS_KEY_DOWNLOAD+code);
     }
 }
